@@ -2,30 +2,40 @@
 
 namespace Acquia\Blt\Tests\BltProject;
 
-use Acquia\Blt\Tests\BltProjectTestBase;
+use Drupal\BuildTests\Framework\BuildTestBase;
+use Symfony\Component\Process\PhpExecutableFinder;
 
 /**
  * Class AcCloudHooksTest.
  */
-class AcCloudHooksTest extends BltProjectTestBase {
+class AcCloudHooksTest extends BuildTestBase {
 
   /**
    * Tests recipes:cloud-hooks:init command.
    */
   public function testSetupCloudHooks() {
-    $this->blt('recipes:cloud-hooks:init');
-    $this->assertFileExists($this->sandboxInstance . '/hooks');
+    $this->copyCodebase();
 
-    $commonPostCodeDeployScript = $this->sandboxInstance . '/hooks/common/post-code-deploy/post-code-deploy.sh';
+    $this->executeCommand('blt recipes:cloud-hooks:init');
+    $this->assertCommandSuccessful();
+
+    $this->assertFileExists($this->getDrupalRoot() . '/hooks');
+
+    $commonPostCodeDeployScript = $this->getDrupalRoot() . '/hooks/common/post-code-deploy/post-code-deploy.sh';
     $this->assertFileExists($commonPostCodeDeployScript);
 
     $filePermissions = substr(sprintf('%o', fileperms($commonPostCodeDeployScript)), -4);
     $this->assertEquals('0755', $filePermissions);
 
-    $this->installDrupalMinimal();
+    $finder = new PhpExecutableFinder();
+    // You can keep the process object for later assertions or manipulations.
+    $this->executeCommand(
+      $finder->find() . ' ./core/scripts/drupal install minimal'
+    );
+    $this->assertCommandSuccessful();
 
     // Mimics hooks/post-code-deploy/post-code-deploy.sh.
-    list($status_code, $output) = $this->blt("artifact:ac-hooks:post-code-update", [
+    $this->executeCommand("blt artifact:ac-hooks:post-code-update", [
       'site' => 's1',
       'target_env' => 'dev',
       'source_branch' => 'master',
@@ -33,34 +43,8 @@ class AcCloudHooksTest extends BltProjectTestBase {
       'repo_url' => 's1@svn-3.bjaspan.hosting.acquia.com:s1.git',
       'repo_type' => 'git',
     ]);
-    $this->assertEquals(0, $status_code);
-    $this->assertContains('Running updates for environment: dev', $output);
-    $this->assertContains('Finished updates for environment: dev', $output);
-
-    // Mimics hooks/post-code-deploy/post-code-deploy.sh.
-    list($status_code, $output) = $this->blt("artifact:ac-hooks:post-code-deploy", [
-      'site' => 's1',
-      'target_env' => 'dev',
-      'source_branch' => 'master',
-      'deployed_tag' => 'master',
-      'repo_url' => 's1@svn-3.bjaspan.hosting.acquia.com:s1.git',
-      'repo_type' => 'git',
-    ]);
-    $this->assertEquals(0, $status_code);
-    // @todo Test that using an ACSF env name fails. E.g., 01dev.
-    $this->assertContains('Running updates for environment: dev', $output);
-    $this->assertContains('Finished updates for environment: dev', $output);
-
-    // Mimics hooks/post-db-copy/db-scrub.sh.
-    list($status_code, $output) = $this->blt("artifact:ac-hooks:db-scrub", [
-      'site' => 's1',
-      'target_env' => 'dev',
-      'db_name' => 'dev',
-      'source_env' => 'dev',
-    ]);
-    $this->assertEquals(0, $status_code);
-    // @todo Test that using an ACSF env name fails. E.g., 01dev.
-    $this->assertContains('Scrubbing database in dev', $output);
+    $this->assertCommandSuccessful();
+    $this->assertCommandOutputContains('Finished updates for environment: dev');
   }
 
 }

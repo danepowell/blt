@@ -85,23 +85,6 @@ abstract class BltProjectTestBase extends TestCase {
   protected static $initialized = FALSE;
 
   /**
-   * Set up.
-   *
-   * {@inheritDoc}.
-   *
-   * @throws \Exception
-   */
-  public static function setUpBeforeClass(): void {
-    if (!self::$initialized) {
-      // Only initialize the sandbox once for the entire test suite.
-      $sandbox_manager = new SandboxManager();
-      $sandbox_manager->bootstrap();
-      self::$initialized = TRUE;
-    }
-    parent::setUpBeforeClass();
-  }
-
-  /**
    * {@inheritdoc}
    */
   public function setUp(): void {
@@ -110,7 +93,7 @@ abstract class BltProjectTestBase extends TestCase {
     $this->bltDirectory = realpath(dirname(__FILE__) . '/../../../');
     $this->fs = new Filesystem();
     $this->sandboxManager = new SandboxManager();
-    $this->sandboxManager->replaceSandboxInstance();
+    $this->sandboxManager->resetSandbox();
     $this->sandboxInstance = $this->sandboxManager->getSandboxInstance();
 
     $ci_config = YamlMunge::mungeFiles($this->sandboxInstance . "/blt/ci.blt.yml", $this->bltDirectory . "/scripts/blt/ci/internal/ci.yml");

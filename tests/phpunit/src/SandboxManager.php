@@ -62,51 +62,6 @@ class SandboxManager {
   }
 
   /**
-   * Ensures that sandbox master exists and is up to date.
-   *
-   * @throws \Exception
-   */
-  public function bootstrap() {
-    $this->output->writeln("Bootstrapping BLT testing framework...");
-    $recreate_master = getenv('BLT_RECREATE_SANDBOX_MASTER');
-    if (!file_exists($this->sandboxMaster) || $recreate_master) {
-      $this->output->writeln("<comment>To prevent recreation of sandbox master on each bootstrap, set BLT_RECREATE_SANDBOX_MASTER=0</comment>");
-      $this->createSandboxMaster();
-    }
-    else {
-      $this->output->writeln("<comment>Skipping master sandbox creation, BLT_RECREATE_SANDBOX_MASTER is disabled.");
-    }
-  }
-
-  /**
-   * Creates a new master sandbox.
-   *
-   * @throws \Exception
-   */
-  public function createSandboxMaster() {
-    $this->output->writeln("Creating master sandbox in <comment>{$this->sandboxMaster}</comment>...");
-    $this->fs->remove($this->sandboxMaster);
-
-    // This essentially mirrors what composer create-project would do, i.e. git
-    // clone and composer install, but with tweaks to use local packages.
-    $this->fs->mirror($this->bltDir . '/subtree-splits/blt-project', $this->sandboxMaster);
-    $this->updateSandboxMasterBltRepoSymlink();
-    $this->installSandboxMasterDependencies();
-    $this->removeSandboxInstance();
-  }
-
-  /**
-   * Removes an existing sandbox instance.
-   */
-  public function removeSandboxInstance() {
-    if (file_exists($this->sandboxInstance)) {
-      $this->debug("Removing sandbox instance...");
-      $this->makeSandboxInstanceWritable();
-      $this->fs->remove($this->sandboxInstance);
-    }
-  }
-
-  /**
    * Outputs debugging message.
    *
    * @param string $message
@@ -129,28 +84,10 @@ class SandboxManager {
   }
 
   /**
-   * Copies all files and dirs from master sandbox to instance.
-   *
-   * Will not overwrite existing files!
-   *
-   * @param array $options
-   *   Options.
-   */
-  protected function copySandboxMasterToInstance(array $options = [
-    'delete' => TRUE,
-    'override' => FALSE,
-  ]) {
-    $this->debug("Copying sandbox master to sandbox instance...");
-    $this->fs->mirror($this->sandboxMaster, $this->sandboxInstance, NULL,
-      $options);
-  }
-
-  /**
    * Overwrites all files in sandbox instance.
    */
-  public function replaceSandboxInstance() {
-    $this->removeSandboxInstance();
-    $this->copySandboxMasterToInstance();
+  public function resetSandbox() {
+
   }
 
   /**
